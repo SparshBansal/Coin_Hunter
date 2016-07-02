@@ -88,3 +88,27 @@ function Coin(pos){
 Coin.prototype.type = "coin";
 
 var simpleLevel = new Level(simpleLevelPlan);
+
+function elt(name , className){
+	var elt = document.createElement(name);
+	if(className)
+		elt.className = className;
+	return elt;
+}
+
+function DOMDisplay(parent , level){
+	this.wrap = parent.appendChild(elt("div" , "game"));
+	this.level = level;
+
+	this.wrap.appendChild(this.drawBackground());
+	this.actorLayer = null;
+	this.drawFrame();
+}
+
+var scale = 20;
+
+DOMDisplay.prototype.drawBackground = function(){
+	var table = elt("table" , "background");
+	table.style.width = this.level.width * scale + "px";
+
+}
