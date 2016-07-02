@@ -22,7 +22,7 @@ function Level(plan) {
       var ch = line[x] , fieldType = null;
       var Actor = actorChars[ch];
       if(Actor)
-        this.actors.push(new Actor(new Vector(x,y) , ch));
+        this.actors.push(new Actor(new Vector(x ,y) , ch));
       else if(ch == "x")
         fieldType = "wall";
       else if(ch == "!")
@@ -31,6 +31,11 @@ function Level(plan) {
     }
     this.grid.push(gridLine);
   }
+
+  this.player = this.actors.filter(function(actor){
+  	return actor.type == "player";
+  })[0];
+  this.status = this.finishDelay = null;
 }
 
 Level.prototype.isFinished = function(){
@@ -53,11 +58,13 @@ Vector.prototype.times = function(factor){
 var actorChars = {
   "@" : Player , 
   "o" : Coin,
-  "=" : Lava, "|" : Lava , "v" : Lava
+  "=" : Lava, 
+  "|" : Lava, 
+  "v" : Lava
 };
 
 function Player(pos){
-  this.pos = pos.plus(0 , -0.5);
+  this.pos = pos.plus(new Vector(0,-0.5));
   this.size = new Vector(0.8 , 1.5);
   this.speed = new Vector(0 , 0);
 }
@@ -80,14 +87,12 @@ function Lava(pos , ch){
 Lava.prototype.type = "lava";
 
 function Coin(pos){
-  this.basePos = pos.plus(new Vector(0.2,0.1));
+  this.basePos = this.pos = pos.plus(new Vector(0.2,0.1));
   this.size = new Vector(0.6,0.6);
   this.wobble = Math.random() * Math.PI * 2;
 }
 
 Coin.prototype.type = "coin";
-
-var simpleLevel = new Level(simpleLevelPlan);
 
 function elt(name , className){
 	var elt = document.createElement(name);
@@ -103,7 +108,7 @@ function DOMDisplay(parent , level){
 	this.wrap.appendChild(this.drawBackground());
 	this.actorLayer = null;
 	this.drawFrame();
-}
+};
 
 var scale = 20;
 
@@ -111,4 +116,65 @@ DOMDisplay.prototype.drawBackground = function(){
 	var table = elt("table" , "background");
 	table.style.width = this.level.width * scale + "px";
 
+	this.level.grid.forEach(function(row){
+		var rowElt = table.appendChild(elt("tr"));
+		rowElt.style.height = scale + "px";
+		row.forEach(function(type){
+			rowElt.appendChild(elt("td" , type));
+		});
+	});
+	return table;
+};
+
+DOMDisplay.prototype.drawActors = function(){
+	var wrap = elt("div");
+	console.log(this.level.actors);
+	this.level.actors.forEach(function(actor){
+		var rect = wrap.appendChild(elt("div" ,  
+			"actor " + actor.type));
+		rect.style.width = actor.size.x * scale + "px";
+		rect.style.height = actor.size.y * scale + "px";
+		rect.style.left = actor.pos.x * scale + "px";
+		rect.style.top = actor.pos.y * scale + "px";
+	});
+	console.log(wrap);
+	return wrap;
+};
+
+DOMDisplay.prototype.drawFrame = function(){
+	if(this.actorLayer)
+		this.wrap.removeChild(this.actorLayer);
+	this.actorLayer = this.wrap.appendChild(this.drawActors());	
+	this.wrap.className = "game " + (this.level.status || "");
+	this.scrollPlayerIntoView();
+};
+
+DOMDisplay.prototype.scrollPlayerIntoView = function(){
+	var width = this.wrap.clientWidth;
+	var height = this.wrap.clientHeight;
+	var margin = width/3;
+
+	var left = this.wrap.scrollLeft , right = left + width;
+	var top = this.wrap.scrollTop , bottom = top + height;
+
+	var player = this.level.player;
+	var center = player.pos.plus(player.size.times(0.5))
+	.times(scale);
+
+	if(center.x < left + margin)
+		this.wrap.scrollLeft = center.x - margin;
+	else if(center.x > right - margin)
+		this.wrap.scrollLeft = center.x + margin - width;
+
+	if(center.y < top + margin)
+		this.wrap.scrollTop = center.y - margin;
+	else if(center.y > bottom - margin)
+		this.wrap.scrollTop = center.y + margin - height; 
 }
+
+DOMDisplay.prototype.clear = function(){
+	this.wrap.parentNode.removeChild(this.wrap);
+};
+
+var simpleLevel = new Level(simpleLevelPlan);
+var display = new DOMDisplay(document.body , simpleLevel);
